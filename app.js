@@ -141,6 +141,12 @@ function renderToday() {
         </div>
       </section>
 
+      <a class="archive-banner" href="#archive" aria-label="Browse ${Number(state.meta.record_count || 0).toLocaleString()} records in the archive">
+        <span><small>The archive</small><strong>${Number(state.meta.record_count || 0).toLocaleString()} public records</strong></span>
+        <span class="archive-range">${escapeHtml(state.meta.archive_start_year || '2015')}–today</span>
+        <b>Browse all <i aria-hidden="true">→</i></b>
+      </a>
+
       <section class="latest-section" aria-labelledby="feed-title">
         <div class="section-heading"><div><p>City records, simplified</p><h2 id="feed-title">Latest requests</h2></div><span>${active.length} live</span></div>
         <div class="request-grid" id="feed">${visible.map(askItem).join('')}</div>
@@ -312,12 +318,14 @@ async function renderArchive() {
   }
   const years = [...new Set(state.asks.map((a) => String(a.submitted_at || '').slice(0, 4)).filter(Boolean))].sort().reverse();
   const categories = ['all', ...new Set(state.asks.map((a) => a.category).filter(Boolean))];
+  let archiveLimit = 50;
   content.innerHTML = `
     <div class="page-shell">
       <section class="archive-intro">
         <p class="eyebrow">A civic memory</p>
         <h1 class="display">The archive</h1>
-        <p class="dek">Search development proposals by the words people actually use: an address, a street, apartments, demolition, a patio.</p>
+        <div class="archive-proof"><strong>${Number(state.meta.record_count || state.asks.length).toLocaleString()}</strong><span>public records<br>${escapeHtml(state.meta.archive_start_year || '2015')}–today</span></div>
+        <p class="dek">Search by address, street, project, or type.</p>
       </section>
       <div class="tools">
         <input id="archive-search" type="search" placeholder="Search an address, project, or type…" aria-label="Search asks" />
@@ -326,6 +334,7 @@ async function renderArchive() {
       </div>
       <p class="result-count" id="archive-count"></p>
       <section class="archive-list" id="archive-results" aria-live="polite"></section>
+      <button class="load-more archive-more" type="button" id="archive-more">Load more records</button>
     </div>`;
 
   const search = document.querySelector('#archive-search');
@@ -333,18 +342,24 @@ async function renderArchive() {
   const category = document.querySelector('#archive-category');
   const results = document.querySelector('#archive-results');
   const count = document.querySelector('#archive-count');
+  const more = document.querySelector('#archive-more');
   const update = () => {
     const query = search.value.trim().toLowerCase();
     const filtered = state.asks.filter((ask) => {
       const haystack = [ask.address, ask.raw_title, ask.raw_description, ask.plain_language_headline, ask.application_type, ask.neighborhood].join(' ').toLowerCase();
       return (!query || haystack.includes(query)) && (year.value === 'all' || String(ask.submitted_at).startsWith(year.value)) && (category.value === 'all' || ask.category === category.value);
-    }).sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at)).slice(0, 150);
-    count.textContent = `${filtered.length}${filtered.length === 150 ? '+' : ''} matching asks`;
-    results.innerHTML = filtered.length ? filtered.map(archiveRow).join('') : '<div class="empty"><h2>No asks match that search.</h2><p>Try a street name, project type, or a broader year.</p></div>';
+    }).sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+    const visible = filtered.slice(0, archiveLimit);
+    count.textContent = filtered.length ? `Showing ${visible.length.toLocaleString()} of ${filtered.length.toLocaleString()} records` : 'No matching records';
+    results.innerHTML = visible.length ? visible.map(archiveRow).join('') : '<div class="empty"><h2>No asks match that search.</h2><p>Try a street name, project type, or a broader year.</p></div>';
+    more.hidden = visible.length >= filtered.length;
+    more.textContent = `Load ${Math.min(50, filtered.length - visible.length).toLocaleString()} more`;
   };
-  search.addEventListener('input', update);
-  year.addEventListener('change', update);
-  category.addEventListener('change', update);
+  const resetAndUpdate = () => { archiveLimit = 50; update(); };
+  search.addEventListener('input', resetAndUpdate);
+  year.addEventListener('change', resetAndUpdate);
+  category.addEventListener('change', resetAndUpdate);
+  more.addEventListener('click', () => { archiveLimit += 50; update(); });
   update();
 }
 
