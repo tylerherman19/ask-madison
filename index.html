@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f0e7" />
+    <meta name="description" content="The things people are asking Madison to change, translated from public city records into plain English." />
+    <title>Ask Madison — What people are asking their city to change</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <link rel="preconnect" href="https://unpkg.com" crossorigin />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to the asks</a>
+    <header class="site-header">
+      <div class="masthead">
+        <a class="brand" href="#today" aria-label="Ask Madison home">
+          <span class="brand-mark" aria-hidden="true">?</span>
+          <span>
+            <strong>ASK MADISON</strong>
+            <small>The things people are asking their city to change.</small>
+          </span>
+        </a>
+        <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+        <nav id="site-nav" aria-label="Main navigation">
+          <a href="#today" data-route="today">Today</a>
+          <a href="#map" data-route="map">Map</a>
+          <a href="#archive" data-route="archive">Archive</a>
+          <a href="#about" data-route="about">About</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="content" tabindex="-1">
+      <div class="loading-state" role="status">
+        <span class="loading-line"></span>
+        <p>Reading Madison’s public records…</p>
+      </div>
+    </main>
+
+    <footer>
+      <p><strong>Ask Madison</strong> is an independent project and is not affiliated with the City of Madison.</p>
+      <p><a href="#about">How this works</a> · <a href="https://www.cityofmadison.com/dpced/planning/development/current-development-proposals/" target="_blank" rel="noopener">City source</a></p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
