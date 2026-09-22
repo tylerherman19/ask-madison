@@ -17,8 +17,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .site-header { position: sticky; z-index: 900; top: 0; background: color-mix(in srgb, var(--paper) 88%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent); backdrop-filter: blur(18px) saturate(150%); }
 .masthead { max-width: var(--max); height: 62px; margin: 0 auto; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .brand { font: 600 1.6rem/1 var(--serif); letter-spacing: -.04em; text-decoration: none; }
-.live-note { display: flex; align-items: center; gap: .42rem; color: var(--muted); font-size: .75rem; font-weight: 650; }
-.live-note i, .live-count i { width: 7px; height: 7px; border-radius: 50%; background: #5e8c67; box-shadow: 0 0 0 4px rgb(94 140 103 / 12%); }
+.live-count i { width: 7px; height: 7px; border-radius: 50%; background: #5e8c67; box-shadow: 0 0 0 4px rgb(94 140 103 / 12%); }
 #site-nav { display: none; }
 .mobile-nav { position: fixed; z-index: 950; right: 0; bottom: 0; left: 0; height: calc(58px + env(safe-area-inset-bottom)); padding: 0 8px env(safe-area-inset-bottom); display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); background: rgb(251 250 246 / 96%); backdrop-filter: blur(18px); }
 .mobile-nav a { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: var(--muted); font-size: .72rem; font-weight: 650; text-decoration: none; }
@@ -173,7 +172,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media (min-width: 860px) {
   .masthead { height: 84px; padding: 0 32px; }
   .brand { font-size: 2rem; }
-  .live-note { display: none; }
   #site-nav { display: flex; align-items: center; gap: 2rem; }
   #site-nav a { position: relative; padding: .5rem 0; color: #303a36; font-size: .78rem; font-weight: 700; text-decoration: none; }
   #site-nav a::after { content: ''; position: absolute; right: 0; bottom: 0; left: 0; height: 1px; background: var(--green); transform: scaleX(0); transition: transform .25s ease; }
