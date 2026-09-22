@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f4f0e7" />
+    <meta name="theme-color" content="#fbfaf6" />
     <meta name="description" content="The things people are asking Madison to change, translated from public city records into plain English." />
     <title>Ask Madison — What people are asking their city to change</title>
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
@@ -15,14 +15,8 @@
     <a class="skip-link" href="#content">Skip to the asks</a>
     <header class="site-header">
       <div class="masthead">
-        <a class="brand" href="#today" aria-label="Ask Madison home">
-          <span class="brand-mark" aria-hidden="true">?</span>
-          <span>
-            <strong>ASK MADISON</strong>
-            <small>The things people are asking their city to change.</small>
-          </span>
-        </a>
-        <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+        <a class="brand" href="#today" aria-label="Ask Madison home">Ask Madison</a>
+        <span class="live-note"><i aria-hidden="true"></i> Live public records</span>
         <nav id="site-nav" aria-label="Main navigation">
           <a href="#today" data-route="today">Today</a>
           <a href="#map" data-route="map">Map</a>
@@ -43,6 +37,13 @@
       <p><strong>Ask Madison</strong> is an independent project and is not affiliated with the City of Madison.</p>
       <p><a href="#about">How this works</a> · <a href="https://www.cityofmadison.com/dpced/planning/development/current-development-proposals/" target="_blank" rel="noopener">City source</a></p>
     </footer>
+
+    <nav class="mobile-nav" aria-label="Mobile navigation">
+      <a href="#today" data-route="today"><span aria-hidden="true">⌂</span>Today</a>
+      <a href="#map" data-route="map"><span aria-hidden="true">⌖</span>Map</a>
+      <a href="#archive" data-route="archive"><span aria-hidden="true">⌕</span>Archive</a>
+      <a href="#about" data-route="about"><span aria-hidden="true">○</span>About</a>
+    </nav>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script type="module" src="app.js"></script>

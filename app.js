@@ -5,13 +5,15 @@ const state = {
   map: null,
   mapLayer: null,
   mapFilter: 'all',
+  homeMap: null,
+  homeMapLayer: null,
+  selectedAskId: null,
   archiveLoaded: false,
   archiveLoading: null,
 };
 
 const content = document.querySelector('#content');
 const nav = document.querySelector('#site-nav');
-const menuButton = document.querySelector('.menu-button');
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (char) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -51,6 +53,13 @@ const eventLabel = (ask) => {
 const categoryLabel = { build: 'Build', change: 'Change', fix: 'Fix', use: 'Use', decision: 'Decision' };
 const askHref = (ask) => `#ask/${encodeURIComponent(ask.id)}`;
 const sourceLink = (ask) => ask.source_url || 'https://www.cityofmadison.com/dpced/planning/development/current-development-proposals/';
+const displayAction = (ask) => {
+  const headline = String(ask.plain_language_headline || ask.raw_title || 'A change is being requested.');
+  return headline
+    .replace(/^Someone wants to\s+/i, '')
+    .replace(/\s+here\.?$/i, '.')
+    .replace(/^./, (char) => char.toUpperCase());
+};
 const isLiveAsk = (ask) => {
   if (!ask.is_current) return false;
   const currentYear = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', year: 'numeric' }).format(new Date()));
@@ -60,42 +69,25 @@ const isLiveAsk = (ask) => {
 };
 
 function setActiveNav(route) {
-  document.querySelectorAll('nav a').forEach((link) => {
+  document.querySelectorAll('[data-route]').forEach((link) => {
     const active = link.dataset.route === route;
     link.toggleAttribute('aria-current', active);
   });
 }
 
-function closeMenu() {
-  nav.classList.remove('open');
-  menuButton.setAttribute('aria-expanded', 'false');
-}
-
-menuButton.addEventListener('click', () => {
-  const open = !nav.classList.contains('open');
-  nav.classList.toggle('open', open);
-  menuButton.setAttribute('aria-expanded', String(open));
-});
-nav.addEventListener('click', closeMenu);
-
 function askItem(ask) {
-  const next = ask.next_event_at ? `${fmtDate(ask.next_event_at, { short: true })} · ${ask.next_event_name}` : 'No meeting scheduled';
   const displayCategory = normalizedStatus(ask) === 'Approved' ? 'decision' : ask.category;
   return `
-    <article class="ask-item" data-category="${escapeHtml(displayCategory)}">
-      <div class="item-top">
-        <span class="time">${escapeHtml(eventLabel(ask))}</span>
-        <span class="tag">${escapeHtml(categoryLabel[displayCategory] || 'Change')}</span>
-      </div>
-      <h2><a href="${askHref(ask)}">${escapeHtml(ask.plain_language_headline)}</a></h2>
-      <p class="address">${escapeHtml(ask.address)}</p>
-      <p class="summary">${escapeHtml(ask.plain_language_summary)}</p>
-      <div class="item-meta">
-        <div class="meta-unit"><b>Asking for</b><span>${escapeHtml(ask.application_type || 'City review')}</span></div>
-        <div class="meta-unit"><b>Status</b><span>${escapeHtml(normalizedStatus(ask))}</span></div>
-        <div class="meta-unit"><b>Next</b><span>${escapeHtml(next)}</span></div>
-      </div>
-      <a class="paper-link" href="${askHref(ask)}">View the paper trail →</a>
+    <article class="request-card" data-category="${escapeHtml(displayCategory)}">
+      <a href="${askHref(ask)}" aria-label="${escapeHtml(displayAction(ask))} at ${escapeHtml(ask.address)}">
+        <div class="card-top"><span>${escapeHtml(eventLabel(ask))}</span><i aria-hidden="true"></i></div>
+        <h3>${escapeHtml(displayAction(ask))}</h3>
+        <div class="card-foot">
+          <span class="pin" aria-hidden="true"></span>
+          <span>${escapeHtml(ask.address)}</span>
+          <b aria-hidden="true">↗</b>
+        </div>
+      </a>
     </article>`;
 }
 
@@ -122,73 +114,102 @@ function renderToday() {
     const aDate = new Date(a.last_source_update || a.submitted_at);
     return bDate - aDate;
   });
-  const highlights = selectHighlights(active);
-  const decidedThisWeek = active.filter((a) => normalizedStatus(a) === 'Approved').length;
-  const upcoming = active.filter((a) => a.next_event_at && new Date(a.next_event_at) >= new Date()).length;
   const visible = active.slice(0, state.feedLimit);
+  const mapped = active.filter((ask) => ask.latitude && ask.longitude);
+  state.selectedAskId = state.selectedAskId && active.some((ask) => ask.id === state.selectedAskId) ? state.selectedAskId : mapped[0]?.id;
 
   content.innerHTML = `
-    <div class="page-shell">
-      <section aria-labelledby="today-title">
-        <p class="eyebrow">${escapeHtml(fmtHeroDate())}</p>
-        <h1 class="display" id="today-title">What Madison is being asked to change.</h1>
-        <p class="dek">Development proposals, public hearings, and city decisions—translated from the paperwork into ordinary language.</p>
-        <div class="hero-rule">
-          <span>${active.length} active asks</span>
-          <span>${decidedThisWeek} decisions in the current feed</span>
-          <span>${upcoming} upcoming hearings</span>
-          <span>Updated ${escapeHtml(fmtDate(state.meta.generated_at, { short: true }))}</span>
+    <div class="home-shell">
+      <section class="home-hero" aria-labelledby="today-title">
+        <p class="date-line">${escapeHtml(fmtHeroDate())}</p>
+        <h1 id="today-title">What people<br>want changed.</h1>
+        <p>Real requests to the City of Madison,<br class="desktop-break"> translated into plain English.</p>
+        <div class="live-count"><i aria-hidden="true"></i>${active.length} active requests · Updated ${escapeHtml(fmtDate(state.meta.generated_at, { short: true }))}</div>
+      </section>
+
+      <section class="home-map-section" aria-labelledby="map-title">
+        <div class="section-heading">
+          <div><p>Explore the city</p><h2 id="map-title">What Madison is asking for</h2></div>
+          <a href="#map">Open full map ↗</a>
+        </div>
+        <div class="home-map-frame">
+          <div class="map-filter map-filter-home" role="group" aria-label="Filter map markers">
+            ${[['all','All'],['build','Build'],['change','Change'],['use','Use'],['decision','Decided']].map(([value, label]) => `<button type="button" data-map-filter="${value}" class="${state.mapFilter === value ? 'active' : ''}">${label}</button>`).join('')}
+          </div>
+          <div id="home-map" aria-label="Map of active asks in Madison"></div>
+          <div class="map-story" id="map-story" aria-live="polite"></div>
         </div>
       </section>
 
-      <section class="today-module" aria-labelledby="madison-today">
-        <div class="section-kicker">
-          <h2 id="madison-today">Madison today</h2>
-          <p>Selected by transparent rules: recent change, scale, and upcoming action.</p>
-        </div>
-        <div class="today-grid">
-          ${highlights.map((ask) => `
-            <article class="brief">
-              <span class="brief-type">${escapeHtml(ask.change_type || (ask.scale_score > 100 ? 'Large proposal' : 'Active ask'))}</span>
-              <h3><a href="${askHref(ask)}">${escapeHtml(ask.plain_language_headline)}</a></h3>
-              <p>${escapeHtml(ask.address)}${ask.next_event_at ? ` · ${escapeHtml(fmtDate(ask.next_event_at, { short: true }))}` : ''}</p>
-            </article>`).join('')}
-        </div>
+      <section class="latest-section" aria-labelledby="feed-title">
+        <div class="section-heading"><div><p>City records, simplified</p><h2 id="feed-title">Latest requests</h2></div><span>${active.length} live</span></div>
+        <div class="request-grid" id="feed">${visible.map(askItem).join('')}</div>
+        ${visible.length < active.length ? `<button class="load-more" type="button" id="load-more">Show all ${active.length} requests</button>` : ''}
       </section>
-
-      <div class="feed-layout">
-        <section aria-labelledby="feed-title">
-          <h2 class="feed-heading" id="feed-title">The latest asks</h2>
-          <div id="feed">${visible.map(askItem).join('')}</div>
-          ${visible.length < active.length ? `<button class="load-more" type="button" id="load-more">Show more asks</button>` : ''}
-        </section>
-        <aside class="rail" aria-label="About this feed">
-          <div class="rail-block">
-            <h3>Reading the feed</h3>
-            <ul>
-              <li><i class="key-dot build"></i> Build or create</li>
-              <li><i class="key-dot"></i> Change a property</li>
-              <li><i class="key-dot fix"></i> Fix infrastructure</li>
-              <li><i class="key-dot use"></i> Use a place differently</li>
-              <li><i class="key-dot decision"></i> City decision</li>
-            </ul>
-          </div>
-          <div class="rail-block">
-            <h3>What this is</h3>
-            <p>Each story starts with a City of Madison record. The original wording and documents stay one click away.</p>
-          </div>
-          <div class="rail-block">
-            <h3>See a mistake?</h3>
-            <p>Use the original record to verify details. A public correction channel can be added after launch.</p>
-          </div>
-        </aside>
-      </div>
     </div>`;
+
+  initHomeMap(active);
 
   document.querySelector('#load-more')?.addEventListener('click', () => {
     state.feedLimit += 10;
     renderToday();
     document.querySelector('#feed')?.scrollIntoView({ block: 'start' });
+  });
+}
+
+function renderMapStory(ask) {
+  const target = document.querySelector('#map-story');
+  if (!target || !ask) return;
+  const displayCategory = normalizedStatus(ask) === 'Approved' ? 'decision' : ask.category;
+  target.dataset.category = displayCategory;
+  target.innerHTML = `<a href="${askHref(ask)}"><span>${escapeHtml(eventLabel(ask))}</span><h3>${escapeHtml(displayAction(ask))}</h3><p>${escapeHtml(ask.address)}</p><b aria-hidden="true">→</b></a>`;
+}
+
+function initHomeMap(active) {
+  if (!window.L) {
+    document.querySelector('#home-map').innerHTML = '<div class="empty"><h2>The map could not load.</h2></div>';
+    return;
+  }
+  const mapped = active.filter((ask) => ask.latitude && ask.longitude);
+  state.homeMap = window.L.map('home-map', { scrollWheelZoom: false, zoomControl: false }).setView([43.0731, -89.4012], 11.5);
+  window.L.control.zoom({ position: 'topright' }).addTo(state.homeMap);
+  window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(state.homeMap);
+  state.homeMapLayer = window.L.layerGroup().addTo(state.homeMap);
+
+  const draw = () => {
+    state.homeMapLayer.clearLayers();
+    const filtered = mapped.filter((ask) => state.mapFilter === 'all' || (state.mapFilter === 'decision' ? normalizedStatus(ask) === 'Approved' : ask.category === state.mapFilter));
+    filtered.forEach((ask) => {
+      const marker = window.L.circleMarker([ask.latitude, ask.longitude], {
+        radius: ask.id === state.selectedAskId ? 10 : 7,
+        color: '#fff', weight: 3, fillColor: markerColor(ask), fillOpacity: 1,
+      });
+      marker.on('click', () => {
+        state.selectedAskId = ask.id;
+        renderMapStory(ask);
+        draw();
+      });
+      marker.addTo(state.homeMapLayer);
+    });
+    const selected = filtered.find((ask) => ask.id === state.selectedAskId) || filtered[0];
+    if (selected) {
+      state.selectedAskId = selected.id;
+      renderMapStory(selected);
+    } else {
+      const target = document.querySelector('#map-story');
+      if (target) target.innerHTML = '<p>No requests match this filter.</p>';
+    }
+  };
+  draw();
+  document.querySelector('.map-filter-home')?.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-map-filter]');
+    if (!button) return;
+    state.mapFilter = button.dataset.mapFilter;
+    document.querySelectorAll('.map-filter-home [data-map-filter]').forEach((item) => item.classList.toggle('active', item === button));
+    draw();
   });
 }
 
@@ -450,6 +471,11 @@ function renderAbout() {
 }
 
 function route() {
+  if (state.homeMap) {
+    state.homeMap.remove();
+    state.homeMap = null;
+    state.homeMapLayer = null;
+  }
   if (state.map) {
     state.map.remove();
     state.map = null;
