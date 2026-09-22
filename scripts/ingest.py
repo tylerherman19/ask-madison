@@ -123,7 +123,7 @@ def parse_planning_page(url: str, is_current: bool) -> list[dict]:
             "submitted_at": submitted,
             "raw_title": address,
             "raw_description": raw_description,
-            "application_type": details.get("Request/Application Type", "City review"),
+            "application_type": details.get("Request/Application Type") or "City review",
             "status": details.get("Status", "Under review"),
             "legistar_links": legistar_links,
             "legistar_file_number": legistar_links[0]["file"] if legistar_links else None,
@@ -136,6 +136,8 @@ def parse_planning_page(url: str, is_current: bool) -> list[dict]:
 
 def category_for(description: str, application: str) -> str:
     text = f"{description} {application}".lower()
+    if re.search(r"rezone|zoning|property lines?|certified survey map|\bcsm\b", text):
+        return "change"
     if re.search(r"street|traffic|sidewalk|crossing|signal|bike|infrastructure", text):
         return "fix"
     if re.search(r"outdoor (eating|seating)|amplified|event|restaurant|bar|tavern|home occupation|parking facility", text):
@@ -190,6 +192,8 @@ def plain_language(description: str, application: str, address: str) -> tuple[st
         headline = f"Someone wants to convert {object_text[0].lower() + object_text[1:]}."
     elif re.search(r"construct|addition|building", lower):
         headline = "Someone wants to build or expand something here."
+    elif lower.startswith("revised "):
+        headline = "Someone wants to revise the property plan here."
     elif lower.startswith(("allow ", "approve ", "amend ", "revise ", "relocate ", "expand ")):
         verb_phrase = original[0].lower() + original[1:]
         headline = f"Someone wants Madison to {verb_phrase}."

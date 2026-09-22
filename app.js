@@ -51,6 +51,13 @@ const eventLabel = (ask) => {
 const categoryLabel = { build: 'Build', change: 'Change', fix: 'Fix', use: 'Use', decision: 'Decision' };
 const askHref = (ask) => `#ask/${encodeURIComponent(ask.id)}`;
 const sourceLink = (ask) => ask.source_url || 'https://www.cityofmadison.com/dpced/planning/development/current-development-proposals/';
+const isLiveAsk = (ask) => {
+  if (!ask.is_current) return false;
+  const currentYear = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', year: 'numeric' }).format(new Date()));
+  const submittedYear = Number(String(ask.submitted_at || '').slice(0, 4));
+  const changedYear = Number(String(ask.last_source_update || '').slice(0, 4));
+  return submittedYear >= currentYear - 1 || changedYear >= currentYear - 1;
+};
 
 function setActiveNav(route) {
   document.querySelectorAll('nav a').forEach((link) => {
@@ -110,9 +117,9 @@ function selectHighlights(active) {
 
 function renderToday() {
   setActiveNav('today');
-  const active = state.asks.filter((ask) => ask.is_current).sort((a, b) => {
-    const bDate = new Date(b.last_source_update || b.updated_at || b.submitted_at);
-    const aDate = new Date(a.last_source_update || a.updated_at || a.submitted_at);
+  const active = state.asks.filter(isLiveAsk).sort((a, b) => {
+    const bDate = new Date(b.last_source_update || b.submitted_at);
+    const aDate = new Date(a.last_source_update || a.submitted_at);
     return bDate - aDate;
   });
   const highlights = selectHighlights(active);
@@ -193,7 +200,7 @@ function markerColor(ask) {
 function renderMapMarkers() {
   if (!state.map || !window.L) return;
   state.mapLayer?.clearLayers();
-  const asks = state.asks.filter((ask) => ask.is_current && ask.latitude && ask.longitude)
+  const asks = state.asks.filter((ask) => isLiveAsk(ask) && ask.latitude && ask.longitude)
     .filter((ask) => state.mapFilter === 'all' || (state.mapFilter === 'decision' ? normalizedStatus(ask) === 'Approved' : ask.category === state.mapFilter));
   asks.forEach((ask) => {
     const color = markerColor(ask);
